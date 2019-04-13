@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script type="text/javascript">
+            
+            // define location of server
+            var url = "ws://localhost:8765"
+
+            // open websockets connection to the server specified
+            var exampleSocket = new WebSocket(url);
+
+            var modifiers = [8, 9, 16, 17];
+
+            var buffer = [];
+            
+            // wait for the connection to be established
+            exampleSocket.onopen = function() {
+                
+                // send data on every keystroke
+                document.addEventListener('keydown', function(event) {
+                    
+                    if(modifiers.includes(event.keyCode)) {
+                        buffer.push(event.keyCode);
+                    };
+                        
+                    
+                    d = {"key": event.keyCode, "etc": "whatever"};
+                    d = JSON.stringify(d);
+                    exampleSocket.send(d);
+                    console.log(event.key + " sent.");
+                });
+
+            };
+
+            exampleSocket.onerror = function (event) {
+                alert("Lost connection to " + url);
+            }
+
+    </script>
+        </script>
+    </head>
+
+    <body>
+        <p>See console output (Inspect Element)</p>
+    </body>
+
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "rbmc-gui",
+  "version": "1.0.0",
+  "description": "RBMC GUI",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Tim Dettmar",
+  "license": "ISC"
+}
