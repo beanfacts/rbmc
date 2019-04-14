@@ -41,7 +41,63 @@
     </head>
 
     <body>
-        <p>See console output (Inspect Element)</p>
+        <div class="all">
+            <!-- Navigation header -->
+            <div class="top">
+                
+                <div id="header menu">
+                    <p class="sans">rbmc</p>
+                </div>
+                
+                <div id="header logout">
+                    <a href="http://google.com"></a>
+                </div>
+    
+            </div>
+            
+            <!-- Control Window -->
+            <div class="control">
+                
+                <!-- Navigation Menu -->
+                <div class="window nav">
+                    <div class="window nav buttons">
+                            <button><span style="color: red;"></t><i class="fas fa-times"></i></span>&nbsp; 192.168.1.200</button>
+                            <button><span style="color: red;"></t><i class="fas fa-times"></i></span>&nbsp; 192.168.1.201</button>
+                            <button><span style="color: red;"></t><i class="fas fa-times"></i></span>&nbsp; 192.168.1.202</button>
+                            <button><span style="color: red;"></t><i class="fas fa-times"></i></span>&nbsp; 192.168.1.203</button>
+                        </div>
+                    </div>
+                
+                <!-- Context menu for selected device -->
+                <div class="window context">
+                    <!-- Select terminal mode -->
+                    <div class="window context mode">
+                        <select>
+                            <option value="video">Video In</option>
+                            <option value="vnc">VNC</option>
+                        </select>
+                        <button onclick="switchMode()"><i class="fas fa-sync-alt"></i></button>
+                    </div>    
+                    
+                    <div class="window context buttons">
+                                
+                            </div>
+                </div>
+                
+                <!-- Active Computer -->
+                <div class="window active" id="activewindow" tabindex="0">
+                    <div class="window active video">
+                        <!-- <img src="static/images/nosignal.png"></img> -->
+                        <video src="localhost:8080" content-type="video/webm"></video>
+                    </div>
+                </div>
+            
+            </div>
+    
+            <div class="bottom">
+            </div>
+    
+        </div>
     </body>
 
 </html>
