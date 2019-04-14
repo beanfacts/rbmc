@@ -1,6 +1,123 @@
 <!DOCTYPE html>
 <html>
     <head>
+        
+        <title>rbmc</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.1/css/all.css">
+        <style>
+        
+        /* no margin and flex padding */
+        body {
+            margin: 0%;
+        }
+        
+        /* stack active window and debug console on top of each other */
+        .all {
+            display: flex;
+            flex-direction: column;
+            padding: 0px 0px;
+            flex-wrap: nowrap;
+            overflow: hidden;
+        }
+    
+        .all .top {
+            display: flex;
+            padding-left: 10px;
+            padding-right: 10px;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            background-color: #ABC;
+            overflow: hidden;
+            flex: 1 0 10%;
+        }
+    
+        .all .control {
+            display: flex;
+            flex-flow: row;
+            height: 100%;
+            flex: 1 0 50%;
+        }
+    
+        .all .bottom {
+            background-color: #999;
+            padding: 10px;
+            flex: 1 1 40%;
+        }
+        
+        /* set all text to sans-serif */
+        p {
+            font-family: sans-serif;
+        }
+    
+        /* main active area */
+        .control .window {
+            flex: 0 1 auto;
+        }
+    
+        /* video feed window */
+        .control .window.active {
+            background-color: #ddd;
+            padding: 4px;
+            text-align: center;    
+        }
+    
+        .control .window.active.video {
+            width: 720px;
+            height: 576px;
+        }
+    
+        /* select computer to control */
+        .control .window.context {
+            flex: 0 0 150px;
+            background-color: #bbb;
+        }
+    
+        .control .window.nav {
+            background-color: #ddd;
+            flex: 0 0 200px;
+        }
+    
+        .control .window.nav.buttons button {
+            background-color: #ddd;
+            width: 100%;
+            border: 1px solid #ccc;
+            color: #222;
+            height: 25px;
+            cursor: pointer;
+        }
+    
+        .control .window.nav.buttons button:hover {
+            background-color: #ccc;
+        }
+    
+        /* context menu */
+        .control.window.context.buttons {
+            background-color: #ddd;
+            width: 100%;
+            border: 1px solid #ccc;
+            color: #222;
+            padding: 10px 24px;
+            cursor: pointer;
+        }
+    
+        .control .window.context {
+            padding: 0px 0px;
+            margin: 0px;
+        }
+    
+        .control .window.context.mode {
+            text-align: center;
+            border: none;
+            color: black;
+            background-color: #999;
+            padding: 3px 3px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    
+    
+        </style>    
+        
         <script type="text/javascript">
             
             // define location of server
