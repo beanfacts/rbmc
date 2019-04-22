@@ -34,7 +34,6 @@ unsigned char outputPins[4] = {6, 7, 8, 9};
   
   The LSB is: A0
 */
-
 /*
  Specify the operating voltage of the board.
  By default, this should be 50 (50 * 100 mV = 5V)
@@ -62,7 +61,7 @@ int arraynumber = 0;
 unsigned char bytes[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 int keyboardBytes = 0;
 int keyboardPress = 0;
-//int keyboardEnable = 4;
+
 
 void setup() {
        
@@ -106,87 +105,47 @@ void setup() {
 }
 
 void loop() {
-  /*
-  unsigned int value = 0;
-  
-  for (int i=0; i<4; i++) {
-    
-    // convert 10-bit to 8-bit
-    int temp = analogRead(analoginPins[i]);
-    int reading = map(temp, 0, 1023, 0, 255);
-
-    senseBytes[i] = reading;
-  }
-  
-  // Serial.print("/A: " + String(value) + "/");
-  
-  // for every digital pin
-  for (int i=4; i<8; i++) {
-    
-    // read data
-    int temp = digitalRead(digitalinPins[i-4]);
-    senseBytes[i] = temp;
-    }
-    */
+//I will leave this one empty for now.
 }
 
 void receiveEvent(int num) {
   
   // read 8 bits of data
-  byte x = Wire.read();
-  Serial.println("---------");
-  Serial.println("data x: " + String(x));
-  Serial.println("Previous keyboardBytes: " +String(keyboardBytes));
+  int x = Wire.read();
+  //Serial.println("---------");
+  Serial.println(x);
+  //Serial.println("Previous keyboardBytes: " +String(keyboardBytes));
   
   //This is a procress when we know how many bytes we need to recieve after the data bytes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ///
   if (keyboardBytes > 0) {
-    
     // do the thing
     bytes[arraynumber] = x;
     arraynumber += 1;
     keyboardBytes -= 1;
-    
-    Serial.println("Keyboard process!");
-    
+        
     if (keyboardBytes == 0) {
       
       for (int i=0; i<keyboardPress; i++){
-        
-        /*if (digitalRead(keyboardEnable) == LOW){
-          keyboardPress = 0;
-          Serial.println("Returning");
-          arraynumber = 0;
-          return;
-         }*/
-
-        Serial.print("-> ");
-        
-        Serial.println("KeyboardData: " + String(bytes[i]));
+    
+        //Serial.println("KeyboardData: " + String(bytes[i]));
         Keyboard.press(bytes[i]);
+        Keyboard.releaseAll();
         }
         
         // clear
-        for (int i=0; i<8; i++ ){
+      for (int i=0; i<8; i++ ){
           bytes[i] = 0;
-          Serial.print(bytes[i]);
-          Serial.print(" ");
+          //Serial.print(bytes[i]);
+          //Serial.print(" ");
       }
       delay(250);
       Keyboard.releaseAll(); 
       keyboardPress = 0;
     }
-    Serial.println("Complete Returning");    
+    //Serial.println("Complete Returning");    
     arraynumber = 0;
     return;
   }
-
-  Serial.println("Passed the keyboard condition");
- 
-  // Read and set each digital pin corresponding to the bit and we don't need this one anymore because we have a new one now.
- /* for (int i = 0; i < 4; i++) {
-    int state = bitRead(x, i);
-    digitalWrite(outputPins[i], state);}*/
-    //We will get 1 byte and it will let us know if it is keyboard mode or pin setup mode.
 
   //pin mode
   if (bitRead(x,7) == 0){
@@ -201,8 +160,8 @@ void receiveEvent(int num) {
       data += bitRead(x, b) * p;
       p = p * 2;
     }
-    Serial.print("state: " + String(state));
-    Serial.print("data: " + String(data));
+    //Serial.print("state: " + String(state));
+    //Serial.print("data: " + String(data));
    //Control the pin(Order of it)
    digitalWrite(outputPins[data], state);
   }
@@ -221,12 +180,7 @@ void receiveEvent(int num) {
 }
 
 // When the master requests data from the device, return the recieved values
-int senseCounter = 0;
+
 void RequestedEvent() {
-  if(senseCounter == 8){
-    senseCounter = 0;
-    return;
-  }
-  Wire.write(senseBytes[senseCounter]);
-  senseCounter += 1;
+  
 }  
