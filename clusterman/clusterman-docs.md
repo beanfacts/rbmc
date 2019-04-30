@@ -21,6 +21,7 @@ The computer or server specifies the purpose of the data it's sending, like keyb
 | Mode | Type | Purpose |
 | ---- | ---- | ------- |
 | list_src | Request - Response | Populate the list with available IP addresses of controllers | 
+| list_cap | Request - Response | List the address and capabilities of a particular controller | 
 | change_src | Request - Response | List the available sources for a particular device. For instance, VNC and video, and where to find them. |
 | integ_check | Request - Response | Check if the server is operational, by sending back the same input data |
 | keyboard | Request | Send keystrokes to the system controller of specified name |
@@ -68,6 +69,38 @@ Request
 /* This turns on the power pin, waits 300ms, then turns it off. */
 ```
 No response.
+
+---
+
+`list_cap`
+```javascript
+Request
+{
+    "mode": "list_cap",
+}
+/* Request the capabilites of a particular device */
+```
+```javascript
+Response
+"data": {
+    "Server5": {
+            "hostname": "helloworld",
+            "address": "1.2.3.4",
+            "client_address": "2.3.4.5",
+            "video": {
+                "url": "http://1.2.3.4/stream/",
+                "format": "mjpg",
+            },  
+            "vnc": {
+                "url": "http://2.3.4.5:1111/",
+            }
+        },
+},
+"success": true,
+"init_req": "list_cap",
+}
+/* The client address is the address of the computer being controlled */
+```
 
 ---
 
