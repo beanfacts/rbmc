@@ -18,6 +18,7 @@
             padding: 0px 0px;
             flex-wrap: nowrap;
             overflow: hidden;
+            background-color: #000;
         }
     
         .all .top {
@@ -28,7 +29,7 @@
             flex-wrap: nowrap;
             background-color: #ABC;
             overflow: hidden;
-            flex: 1 0 10%;
+            flex: 1 1 auto;
         }
     
         .all .control {
@@ -45,7 +46,7 @@
     
         /* main active area */
         .control .window {
-            flex: 0 1 auto;
+            flex: 1 1 auto;
         }
     
         /* video feed window */
@@ -56,8 +57,7 @@
         }
     
         .control .window.active.video {
-            width: 720px;
-            height: 576px;
+            flex: 1 1 auto;
         }
     
         /* select computer to control */
@@ -110,14 +110,29 @@
             font-size: 16px;
             cursor: pointer;
         }
+
+        #activewindow {
+            display: grid;
+            height: 100%;
+        }
+
     
     
         </style>    
         
         <script type="text/javascript">
             
+            // Notification function
+            function notify(message) {
+                var x = document.getElementById("header");
+                x.innerHTML += " | " + message;
+                setTimeout(function(){ x.innerHTML = "rBMC"; }, 3000);
+            }
+            
+            var ipa = prompt("Enter the IP address of the server.");
+
             // define location of server
-            var url = "ws://localhost:8765"
+            var url = "ws://" + ipa + ":8765";
 
             // open websockets connection to the server specified
             mainSocket = new WebSocket(url);
@@ -131,24 +146,34 @@
             // random number for quick integrity check
             check = Math.floor((Math.random() * Math.pow(2, 52)) + 1).toString(16);
             
-
-
             // wait for the connection to be established
             mainSocket.onopen = function() {
+                /*
+                setInterval(function() {
+                    getLED();
+                }, 4000);
+                */
                 
+                
+                notify("Connected to " + url);
+
                 // send integrity test data
                 var d = {"mode": "integ_check", "data": check};
                 d = JSON.stringify(d);
                 mainSocket.send(d);
 
                 // initialize list of IPs
-                init()
+                init();
 
                 var buffer = [];
                 
                 // send data on every keystroke
                 document.addEventListener('keydown', function(event) {
 
+                    if (event.keyCode == 8 || event.keyCode == 46) {
+                        event.preventDefault();
+                    }
+                    
                     if (document.activeElement.id == actName) {
                     
                         // clear previous data
@@ -165,7 +190,7 @@
                         */
 
                         if(modifiers.includes(event.keyCode) == false || buffer.length >= 6) {
-                            d = {"mode": "keyboard", "keys": buffer};
+                            d = {"mode": "keyboard", "keys": buffer, "format": "js"};
                             d = JSON.stringify(d);
                             mainSocket.send(d);
                             console.log("send< " + buffer);
@@ -179,7 +204,7 @@
             
             // Alert user if a connection error occurs
             mainSocket.onerror = function (event) {
-                alert("Lost connection to " + url);
+                notify("Lost connection to " + url);
             }
 
             // Callback function for the recieved message
@@ -188,6 +213,26 @@
                 processData(event.data);
 
             }
+            
+            // Get the LED status (A0/A1)
+            function getLED() {
+                d = {"mode": "sense", "pins": ["power_led", "hdd_led"]};
+                d = JSON.stringify(d);
+                mainSocket.send(d);
+            }
+
+            function powerToggle() {
+                d = {"mode": "control", "pin": "power", "command": [true, 500, false]};
+                d = JSON.stringify(d);
+                mainSocket.send(d);
+            }
+
+            function resetToggle() {
+                d = {"mode": "control", "pin": "reset", "command": [true, 500, false]};
+                d = JSON.stringify(d);
+                mainSocket.send(d);
+            }
+
 
             // Switch the display mode as well as IP, if that changes.
             function switchMode() {
@@ -211,10 +256,16 @@
                 var menu = document.getElementById("currentMode");
                 var option = menu.options[menu.selectedIndex].value;
                 if (option == "video") {
-                    alert("Connecting to [" + data["hostname"] + "] with url [" + data["video"]["url"] + "] type [" + data["video"]["format"] + "]");
+                    document.getElementById("streamImage").src = data["video"]["url"];
+                    notify("Connecting to " + data["hostname"] + " at " + data["video"]["url"] + " format " + data["video"]["format"] + "");
                 } else {
-                    alert("Connecting to [" + data["hostname"] + "] with url [" + data["vnc"]["url"] + "]");
+                    notify("Connecting to VNC of " + data["hostname"] + " with url " + data["vnc"]["url"] + "");
                 }
+            }
+
+            function displaySensor(data) {
+                document.getElementById("powerDetails").innerHTML = "pwr: " + data["pins"]["power_led"] + " mV";
+                document.getElementById("hddDetails").innerHTML = "hdd: " + data["pins"]["hdd_led"] + " mV";
             }
             
 
@@ -278,6 +329,11 @@
                     switchModeCallback(data);
                 }
 
+                // Get pin voltages
+                if (data["init_req"] == "sense") {
+                    displaySensor(data);
+                }
+
             }
 
             function init() {
@@ -297,7 +353,7 @@
             <div class="top">
                 
                 <div id="header menu">
-                    <p class="sans">rbmc</p>
+                    <p class="sans" id="header">rBMC</p>
                 </div>
                 
                 <div id="header logout">
@@ -330,19 +386,27 @@
                             <button onclick="switchMode()"><i class="fas fa-sync-alt"></i></button>
                         </div>
                         
-                        <p id="connDetails">No connection.</p>
+                        <p id="connDetails">--</p>
+                        <p id="powerDetails">p:</p>
+                        <p id="hddDetails">h:</p>
 
                     </div>
+
+                    <button onclick="powerToggle()"><i class="fas fa-power-off"></i></button>
+                    <button onclick="resetToggle()"><i class="fas fa-redo-alt"></i></button>
+                    <button onclick="getLED()"><i class="fas fa-file-download"></i></button>
+
                 </div>
                 
                 <!-- Active Computer -->
                 <div class="window active" id="activewindow" tabindex="1">
                     <div class="window active video">
-                        <img src="static/images/nosignal.png"></img>
+                        <img id="streamImage" src="static/images/nosignal.png" onerror="this.src='static/images/noconnection.png'; notify('Could not connect to video source!')"></img>
                     </div>
                 </div>
             
             </div>
+
         </div>
     </body>
 

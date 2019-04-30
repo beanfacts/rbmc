@@ -3,7 +3,7 @@
 #define SLAVE_ADDRESS 0x04
 
 /*
-  4-bit output pins:
+  4-bit output pins:8 
   6, 7, 8 and 9.
   
   6 = power button
@@ -17,8 +17,8 @@
 unsigned char outputPins[4] = {6, 7, 8, 9};
 
 /* 
- Pin assignments, using board:
- rbmc-x1
+ Pin assignments, using:
+ rBMC System Controller C (Sparkfun Pro Micro)
 
   ====Analog=====
   a0 = power led
@@ -26,161 +26,200 @@ unsigned char outputPins[4] = {6, 7, 8, 9};
   a2 = undefined
   a3 = undefined
   
-  ====Digital====
-  15 = undefined
-  14 = undefined
-  16 = undefined
-  10 = undefined
-  
   The LSB is: A0
 */
+
 /*
  Specify the operating voltage of the board.
  By default, this should be 50 (50 * 100 mV = 5V)
- 
- MappedValues represents actual ADC values.
- It is populated automatically.
 
  Define analog input pins below. By default the Pro Micro is equipped with 4:
  A0, A1, A2, and A3.
-
- Define the digital input pins below. By default, these are the pins right next to the analog inputs:
- 15, 14, 16, and 10.
  
- */
+*/
 
+int byte_index = 0;
+
+int keyboardBytes = 0;
+int keyboardPress = 0;
 int voltage = 50;
+
+unsigned char bytes[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+unsigned char debug[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+volatile int allowed_control[2] = {8, 10};
+unsigned char inputPins[4] = {A0, A1, A2, A3};
 unsigned char mappedValues[4] = {};
-unsigned char analoginPins[4] = {A0, A1, A2, A3};
-unsigned char digitalinPins[4] = {15, 14, 16, 10};
-unsigned char analogValues[4] = {19, 19, 19, 19};    
 unsigned char senseBytes[8] = {};
 unsigned int lastValue = 0;
 
-int arraynumber = 0;
-unsigned char bytes[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-int keyboardBytes = 0;
-int keyboardPress = 0;
+volatile int data[6] = {0, 0, 0, 0, 0, 0};
+volatile int flag = 0;
+volatile int debug_num = 0;
 
+volatile int pinNum = 0;
+volatile int pinState = 0;
+volatile int reqState = 0;
+
+volatile int x = 0;
+volatile int mul = 0;
+volatile int iic = 0;
+
+volatile int sensePin = 0;
+
+#define enablePin 4
 
 void setup() {
-       
-  // convert analogValues to arduino value out of 255
+
+  // begin serial monitor for debug
+  Serial.begin(38400);
   
-  for (int i=0; i<4; i++) {
-    int temp = analogValues[i];
-    mappedValues[i] = map(temp, 0, voltage, 0, 255);
+  // Never run if the programming mode is active.
+  pinMode(4, INPUT_PULLUP);
+  
+  if (digitalRead(enablePin) == LOW) {
+    delay(1000);
+    Serial.println("Taking control of USB port.");
+    Keyboard.begin();
+  } else {
+    delay(2000);
+    Serial.println("To exit programming mode, turn off the KB pin.");
+    while (true) {
+      delay(1000);
+      Serial.println("<PROGRAM MODE> Waiting..");
+    }
   }
-  
+
+
+       
   // turn all output pins -> output
   for (int i=0; i<4; i++) {
     pinMode(outputPins[i], OUTPUT);
   }
-  
-  // turn all digital input pins -> input using internal pullups
+
+  // turn all pins low
   for (int i=0; i<4; i++) {
-    pinMode(digitalinPins[i], INPUT);
+    digitalWrite(outputPins[i], LOW);
   }
   
   // enable i2c slave
   Wire.begin(SLAVE_ADDRESS);
   
-  // begin serial monitor for debug
-  Serial.begin(115200);
-  
   // on recieve when pi asks to set state on output pins
   Wire.onReceive(receiveEvent);
   
   // onrequest when pi asks arduino for pin states
-  Wire.onRequest(RequestedEvent);
-  
-  // turn all pins low
-  for (int i=0; i<4; i++) {
-    digitalWrite(outputPins[i], HIGH);
-  }
+  Wire.onRequest(requestEvent);
 
-  Keyboard.begin();
-
-  //pinMode(keyboardEnable,INPUT_PULLUP);
 }
 
 void loop() {
-//I will leave this one empty for now.
+  
+  delay(100);
+
+  if (flag == 1) {
+
+    Serial.print("dbg# = ");
+    Serial.println(debug_num);
+    
+    for (int i=0; i < 6; i++) {
+      /* Ignore non-printing characters */
+
+      volatile bool ok = false;
+
+      if (data[i] > 31) {
+        ok = true;
+      } else {
+        for (int i = 0; i < sizeof(allowed_control); i++) {
+          if (allowed_control[i] == data[i]) {
+            ok = true;
+            break;
+          }
+        }
+      }
+
+      
+      if (ok == true) {
+        Keyboard.press(data[i]);
+        Serial.print(data[i]);
+        Serial.print(" pressed ");
+      } else {
+        Serial.print(data[i]);
+        Serial.println(" ignored ");
+      }
+    }
+
+    for (int i=0; i < 6; i++) {
+      data[i] = 0;
+    }
+
+    delay(5);
+    Keyboard.releaseAll();
+
+    flag = 0;
+    
+  } else if (flag == 2) {
+    
+    Serial.print("f: 2");
+    
+    pinState = bitRead(iic, 7);
+    reqState = bitRead(iic, 6);
+
+    if (pinState + reqState == 2) {
+      
+      sensePin = iic - 192;
+      Serial.print("SensePin = ");
+      Serial.println(sensePin);
+    
+    } else {
+      
+      if (pinState == 1) {
+        pinNum = iic - 128;
+      } else {
+        pinNum = iic;
+      }
+      
+      if (pinNum < 4) {
+        digitalWrite(outputPins[pinNum], pinState);
+      }
+      
+    }
+    
+    flag = 0;
+    
+  }
+  
 }
 
 void receiveEvent(int num) {
-  
-  // read 8 bits of data
-  int x = Wire.read();
-  //Serial.println("---------");
-  Serial.println(x);
-  //Serial.println("Previous keyboardBytes: " +String(keyboardBytes));
-  
-  //This is a procress when we know how many bytes we need to recieve after the data bytes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ///
-  if (keyboardBytes > 0) {
-    // do the thing
-    bytes[arraynumber] = x;
-    arraynumber += 1;
-    keyboardBytes -= 1;
-        
-    if (keyboardBytes == 0) {
-      
-      for (int i=0; i<keyboardPress; i++){
+
+  debug_num = num;
+  flag = 0;
+  x = 0;
+
+  if (num > 1) { 
     
-        //Serial.println("KeyboardData: " + String(bytes[i]));
-        Keyboard.press(bytes[i]);
-        Keyboard.releaseAll();
-        }
-        
-        // clear
-      for (int i=0; i<8; i++ ){
-          bytes[i] = 0;
-          //Serial.print(bytes[i]);
-          //Serial.print(" ");
-      }
-      delay(250);
-      Keyboard.releaseAll(); 
-      keyboardPress = 0;
+    volatile int i = 0;
+    
+    while (Wire.available()) {
+      x = Wire.read();
+      data[i] = x;
+      i++;
     }
-    //Serial.println("Complete Returning");    
-    arraynumber = 0;
-    return;
+
+    flag = 1;
+
+  } else {
+
+    iic = Wire.read();
+    flag = 2;
+    
   }
 
-  //pin mode
-  if (bitRead(x,7) == 0){
-    Serial.println("PINMODE");
-    int data = 0;
-    int p = 1;
-    int b = 0;
-    int state = bitRead(x, 3);
-
-    for (int i=0; i<3; i++) {
-      b = i + 4;
-      data += bitRead(x, b) * p;
-      p = p * 2;
-    }
-    //Serial.print("state: " + String(state));
-    //Serial.print("data: " + String(data));
-   //Control the pin(Order of it)
-   digitalWrite(outputPins[data], state);
-  }
-  
-  //Keyboard mode
-  if (bitRead(x,7) == 1){
-    Serial.println("KeyboardMode!");
-    int p = 1;
-    for (int i=0; i<3; i++) {
-      keyboardBytes += bitRead(x, i) * p;
-      p = p * 2;
-    }
-  keyboardPress = keyboardBytes;  
-  Serial.println("KeyboardBytes:" + String(keyboardBytes));
-  }
 }
 
-// When the master requests data from the device, return the recieved values
-
-void RequestedEvent() {
-  
+void requestEvent() {
+  volatile int resp = analogRead(inputPins[sensePin]);
+  resp = map(resp, 0, 1023, 0, 255);
+  Wire.write(resp);
+  sensePin = 0; 
 }  

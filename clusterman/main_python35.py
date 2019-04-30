@@ -5,7 +5,7 @@ import ssl, pathlib
 import json
 import time
 
-from smbus import SMBus, SMBusWrapper
+from smbus2 import SMBus, SMBusWrapper
 bus_no = 0
 iic = SMBus(bus_no)
 address = 0x04
@@ -75,12 +75,14 @@ example_response = \
     }
 """
 
-async def err_json(mode, status, message):
+@asyncio.coroutine
+def err_json(mode, status, message):
     if status == False:
         return {"init_req": mode, "success": status, "error_message": message}
 
 # Converting recieved string data to JSON format
-async def preprocessor(message):
+@asyncio.coroutine
+def preprocessor(message):
     try:
         formatted_message = json.loads(message)
         return formatted_message
@@ -89,7 +91,8 @@ async def preprocessor(message):
         return {"error": "json decoder error"}
 
 # Responding to client requests
-async def responder(data):
+@asyncio.coroutine
+def responder(data):
     global sources
     mode = data["mode"]
     print("REQUEST  <<", data)
@@ -99,13 +102,13 @@ async def responder(data):
             resp = sources[source_ip]
             resp["source_ip"] = source_ip
         except KeyError:
-            resp = await err_json(mode, False, "Source IP selected doesn't exist!")
+            resp = yield from err_json(mode, False, "Source IP selected doesn't exist!")
     
     elif mode == "integ_check":
         try:
             resp = {"data": data["data"]}
         except KeyError:
-            resp = await err_json(mode, False, "An error occurred while processing input data!")
+            resp = yield from err_json(mode, False, "An error occurred while processing input data!")
     
     elif mode == "list_src":
         try:
@@ -114,7 +117,7 @@ async def responder(data):
                 temp.append(src)
             resp = {"ips": temp}
         except KeyError:
-            resp = await err_json(mode, False, "An error occurred while processing input data!")
+            resp = yield from err_json(mode, False, "An error occurred while processing input data!")
 
     elif mode == "keyboard":
         if data["format"] == "js":
@@ -122,10 +125,8 @@ async def responder(data):
             for i in data["keys"]:
                 if i in convert_keycode:
                     new_list += convert_keycode[i]
-                elif i >= 65 and i <= 90:
-                    new_list += [i+32]
                 else:
-                    new_list += [i]
+                    new_list += i
 
             for i in new_list:
                 print(new_list)
@@ -133,7 +134,7 @@ async def responder(data):
                     bus.write_block_data(address, 0, new_list)
 
     else:
-        resp = await err_json(mode, False, "Could not find a way to respond to the request!")
+        resp = yield from err_json(mode, False, "Could not find a way to respond to the request!")
 
     if "error_message" not in resp.keys():
         resp["success"] = True
@@ -147,24 +148,26 @@ async def responder(data):
     Processing client requests without a response, i.e. keyboard input
     Usually, this kind of input gets sent to the System Controller.
 """
-async def processor(data):
+@asyncio.coroutine
+def processor(data):
     print("PROCESS  >>", data)
 
-async def hello(websocket, path):
-    async for message in websocket:
-        
+@asyncio.coroutine
+def hello(websocket, path):
+    while True:
+        message = yield from websocket.recv()
         # Preprocessing of data; string to JSON
-        data = await preprocessor(message)
+        data = yield from preprocessor(message)
         if "error" in data.keys():
             print("An error occurred:", data["error"])
             continue
         # Look up request type and act accordingly
         if respond[data["mode"]] == True:
-            resp = await responder(data)
-            await websocket.send(resp)
+            resp = yield from responder(data)
+            yield from websocket.send(resp)
         
         else:
-            await processor(data)
+            yield from processor(data)
 
 start_server = websockets.serve(hello, '0.0.0.0', 8765)
 print("Server started!")
