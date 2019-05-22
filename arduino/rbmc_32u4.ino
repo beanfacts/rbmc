@@ -113,8 +113,6 @@ void setup() {
 }
 
 void loop() {
-  
-  delay(100);
 
   if (flag == 1) {
 

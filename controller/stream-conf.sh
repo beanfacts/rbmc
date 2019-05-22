@@ -1,0 +1,1 @@
+mjpg_streamer -i "input_uvc.so -r 720x576 -d /dev/video0 -f 12 -q 80 -t pal" -o "output_http.so -p 7070"

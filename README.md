@@ -1,2 +1,2 @@
 # rbmc
-Raspberry Pi Remote KVM Solution
+Flexible remote KVM/IPMI solution

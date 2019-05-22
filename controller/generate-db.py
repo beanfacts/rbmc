@@ -1,3 +1,12 @@
+"""
+
+This code is not complete.
+Do not use
+
+"""
+
+
+
 import argparse, bcrypt, sqlite3
 
 conn = sqlite3.connect('rbmc-master.db')
