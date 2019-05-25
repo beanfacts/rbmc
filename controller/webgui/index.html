@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>rbmc</title>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="static/fonts/fa/css/all.css">
+        <link rel="stylesheet" href="static/bootstrap/css/bootstrap.min.css">
+        <script src="static/bootstrap/js/bootstrap.bundle.js"></script>
+        <script src="static/fonts/font-awesome/js/all.js"></script>
+        
+        <style>
+            
+            /* Window alignment */
+            #window {
+                padding: 5px;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            /* Center video in window */
+            #activewindow {
+                text-align: center;
+                padding: 5px;
+            }
+
+            /* Scale video automatically */
+            #video {
+                overflow: auto;
+            }
+
+            /* Status bar flexbox */
+            .status-bar {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+            }
+
+            /* Style buttons in the status bar */
+            .button {
+                background-color: #333;
+                border: none;
+                padding: 10px;
+                font-size: 18px;
+            }
+
+        </style>
+
+<script type="text/javascript">
+            
+    
+    /* Notification function
+    function notify(message) {
+        var x = document.getElementById("header");
+        x.innerHTML += " | " + message;
+        setTimeout(function(){ x.innerHTML = "rBMC"; }, 3000);
+    }
+    */
+
+    /* Set default status button colours */
+    setTimeout(function() {
+        document.getElementById("powerStatus").style.color = "#444";
+        document.getElementById("resetButton").style.color = "#444";
+        document.getElementById("networkStatus").style.color = "#f00";
+        document.getElementById("videoStatus").style.color = "#f00";
+    }, 1);
+    
+
+
+    var ip = location.host;
+    console.log("Server: " + ip);
+
+    // define location of server
+    var url = "ws://" + ip + ":8765";
+
+    if (ip == "") {
+        alert("Error retrieving source IP!");
+    }
+    
+    
+    // open websockets connection to the server specified
+    mainSocket = new WebSocket(url);
+
+    // global list of valid modifier keys (Shift, Alt, Ctrl, Tab)
+    modifiers = [9, 16, 17, 18];
+
+    // active window name
+    actName = "activewindow";
+
+    // random number for quick integrity check
+    check = Math.floor((Math.random() * Math.pow(2, 52)) + 1).toString(16);
+    
+    // wait for the connection to be established
+    mainSocket.onopen = function() {
+        setInterval(function() {
+            getLED();
+        }, 5000);
+        
+        
+        alert("Connected to " + url);
+
+        // send integrity test data
+        var d = {"mode": "integ_check", "data": check};
+        d = JSON.stringify(d);
+        mainSocket.send(d);
+
+        // initialize list of IPs
+        init();
+
+        var buffer = [];
+        var modPress = [];
+        
+        // Release modifier keys when not pressed
+        document.addEventListener('keyup', function(event) {
+            if (modifiers.includes(event.keyCode) && modPress.includes(event.keyCode) === true) {
+                modPress.splice(modPress.indexOf(event.keyCode), 1);
+            }
+        });
+
+        // send data on every keystroke
+        document.addEventListener('keydown', function(event) {
+
+            // prevent browser default on Backspace or Delete
+            if (event.keyCode === 8 || event.keyCode === 46) {
+                event.preventDefault();
+            }
+
+            // push modifier keys
+            if ((modifiers.includes(event.keyCode) && buffer.includes(modPress.keyCode)) === false) {
+                    modPress.push(event.keyCode);
+                }
+            
+            if (document.activeElement.id == actName) {
+            
+                // clear previous data
+                var d = null;
+                
+                /* 
+                    clear buffer if the key we just pressed was not a modifier
+                    also clear if 6 key rollover limit reached
+                    and then send the data
+                */
+
+                if(modifiers.includes(event.keyCode) === false || buffer.length + modPress.length >= 6) {
+                    var output = modPress.concat(buffer);
+                    d = {"mode": "keyboard", "keys": buffer, "format": "js"};
+                    d = JSON.stringify(d);
+                    mainSocket.send(d);
+                    console.log("send < " + buffer);
+                    buffer = [];
+                };
+            };
+
+        });
+
+    };
+    
+    // Alert user if a connection error occurs
+    mainSocket.onerror = function (event) {
+        alert("Could not connect to " + url);
+    }
+
+    // Callback function for the recieved message
+    mainSocket.onmessage = function(event) {
+        console.log("recv > " + event.data);    
+        processData(event.data);
+
+    }
+    
+    // Get the LED status
+    function getLED() {
+        d = {"mode": "sense", "pins": ["power_led"]};
+        d = JSON.stringify(d);
+        mainSocket.send(d);
+    }
+
+    // Control power button
+    function powerToggle() {
+        d = {"mode": "control", "pin": "power", "command": [true, 500, false]};
+        d = JSON.stringify(d);
+        mainSocket.send(d);
+    }
+
+    // Control reset button
+    function resetToggle() {
+        d = {"mode": "control", "pin": "reset", "command": [true, 500, false]};
+        d = JSON.stringify(d);
+        mainSocket.send(d);
+    }
+
+    function displaySensor(data) {
+        // document.getElementById("powerDetails").innerHTML = "P: " + data["pins"]["power_led"] + " mV";
+    
+    }
+
+    // Toggle video aspect ratio in case image is squished
+    function videoToggle() {
+        var video = document.getElementById("video");
+        if (video.width == 720) {
+            video.width = 1024;
+        } else {
+            video.width = 720;
+        }
+    }
+    
+
+    // Update IP address list
+    function updateIP(ip_array) {
+        
+        
+        var dropdown = document.getElementById("ipList");
+        
+        // Clear the old list
+        dropdown.options.length = 0;
+        
+        // Place the new list of addresses in the dropdown
+        for (var i=0; i < ip_array.length; i++) {
+            var item = ip_array[i];
+            var element = document.createElement("option");
+            element.textContent = item;
+            element.value = item;
+            dropdown.appendChild(element);
+        }        
+    }
+
+    // function to deal with incoming data
+    function processData(data) {
+        
+        // convert string input to json
+        try {
+            var data = JSON.parse(data);
+        }
+        
+        catch(err) {
+            console.log(err.message);
+        }
+        
+
+        // Check if server reports a successful response
+        if (data["success"] == false) {
+            console.log("error: " + data["error_message"]);
+            console:log("while trying to perform: " + data["init_req"]);
+            return null;
+        }
+
+        // Integrity Check
+        if (data["init_req"] == "integ_check") {
+            if (check == data["data"]) {
+                console.log("Integrity check passed.")
+            } else {
+                console.log("Integrity check failed!")
+            }
+        }
+
+        // Get pin voltages
+        if (data["init_req"] == "sense") {
+            displaySensor(data);
+        }
+
+    }
+
+    function init() {
+        d = {"mode": "list_src"};
+        d = JSON.stringify(d);
+        mainSocket.send(d);
+    }
+
+</script>
+</head>
+
+<body>
+    
+<div id="window">
+
+    <div id="activewindow">
+        <img id="video" src="static/images/noactive.png" width="720" height="576">
+    </div>
+
+    <div class="status-bar">
+        <div><button onclick="test()" class="button" id="powerStatus"><i class="fas fa-power-off"></i></button></div>
+        <div><button onclick="resetToggle()" class="button" id="resetButton"><i class="fas fa-redo"></i></button></div>
+        &nbsp;
+        <div><button class="button" id="networkStatus"><i class="fas fa-network-wired"></i></button></div>
+        <div><button class="button" id="videoStatus"><i class="fas fa-video"></i></button></div>
+        &nbsp;
+        <div><button onclick="videoToggle()" class="button"><i class="fas fa-arrows-alt-h"></i></button></div>
+    </div>
+
+</div>
+
+</body>

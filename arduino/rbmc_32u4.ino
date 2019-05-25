@@ -74,18 +74,21 @@ void setup() {
   Serial.begin(38400);
   
   // Never run if the programming mode is active.
-  pinMode(4, INPUT_PULLUP);
+  pinMode(enablePin, INPUT_PULLUP);
   
-  if (digitalRead(enablePin) == LOW) {
+  if (digitalRead(enablePin) == HIGH) {
+  
     delay(1000);
     Serial.println("Taking control of USB port.");
     Keyboard.begin();
+  
   } else {
     delay(2000);
-    Serial.println("To exit programming mode, turn off the KB pin.");
+    Serial.println("To exit programming mode, turn off the keyboard switch and reset.");
     while (true) {
       delay(1000);
-      Serial.println("<PROGRAM MODE> Waiting..");
+      Serial.println("Waiting...");
+  
     }
   }
 

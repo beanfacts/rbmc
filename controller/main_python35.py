@@ -1,41 +1,25 @@
 #!/usr/bin/env python3
 
+from smbus2 import SMBus, SMBusWrapper
 import asyncio, websockets
+import subprocess
 import ssl, pathlib
 import json
 import time
 
-from smbus2 import SMBus, SMBusWrapper
 bus_no = 0
 iic = SMBus(bus_no)
 address = 0x04
 
-board_voltage = 5000
-
-# Example list of sources for testing purposes
-sources = \
-    {
-        "rBMC Demo Machine": {
-            "hostname": "rbmc-target",
-            "manage_ip": "192.168.1.122",
-            "client_ip": "192.168.1.112",
-            "video": {
-                "url": "http://192.168.1.122:7070/?action=stream",
-                "format": "mjpg",
-            },  
-            "vnc": {
-                "url": False,
-            }
-        },
-    }
+board_voltage = 3300
 
 respond = \
     {
-        "change_src": True,
-        "list_src": True,
-        "integ_check": True,
-        "get_addr": True,
-        "keyboard": False,
+    "change_src": True,
+    "list_src": True,
+    "integ_check": True,
+    "get_addr": True,
+    "keyboard": False,
 	"sense": True,
 	"control": False,
     }
@@ -106,38 +90,19 @@ def preprocessor(message):
         formatted_message = json.loads(message)
         return formatted_message
     except json.decoder.JSONDecodeError:
-        print("Server sent invalid data!")
+        print("Client sent invalid data!")
         return {"error": "json decoder error"}
 
 # Responding to client requests
 @asyncio.coroutine
 def responder(data):
-    global sources
     mode = data["mode"]
-    
     print("REQUEST  <<", data)
     print("Mode:", mode)
-
-    if mode == "change_src":
-        source_ip = data["source_ip"]
-        try:
-            resp = sources[source_ip]
-            resp["source_ip"] = source_ip
-        except KeyError:
-            resp = yield from err_json(mode, False, "Source IP selected doesn't exist!")
     
-    elif mode == "integ_check":
+    if mode == "integ_check":
         try:
             resp = {"data": data["data"]}
-        except KeyError:
-            resp = yield from err_json(mode, False, "An error occurred while processing input data!")
-    
-    elif mode == "list_src":
-        try:
-            temp = []
-            for src in sources:
-                temp.append(src)
-            resp = {"ips": temp}
         except KeyError:
             resp = yield from err_json(mode, False, "An error occurred while processing input data!")
 
