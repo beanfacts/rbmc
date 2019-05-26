@@ -11,10 +11,9 @@
 | 2x 10K pull-up resistors | $ 0.02 | $ 0.02 |
 | 170pt mini breadboard | $ 1.00 | $ 1.00 |
 | 40-pin male headers | $ 3.09 | $ 3.09 |
-| Easycap w/ UTV007 or STK1160 | $ 11.50 | $ 11.50 |
+| Easycap w/ built-in HDMI | $ 16.88 | $ 16.88 |
 | Generic Fast Ethernet Adapter | $ 2.55 | $ 2.55 |
 | 4-port USB 2.0 hub | $ 3.69 | $ 3.69 |
 | Generic Pro Micro | $ 3.30 | $ 3.30 |
-| HDMI2AV Converter Box | $ 5.88 | $ 5.88 |
 | 3-ch relay module | $ 3.19 | $ 3.19 |
-| **Total** | **$ 59.63** | **$ 67.62** |
+| **Total** | **$ 59.13** | **$ 67.12** |
