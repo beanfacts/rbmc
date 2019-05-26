@@ -7,7 +7,7 @@ import ssl, pathlib
 import json
 import time
 
-bus_no = 0
+bus_no = 1
 iic = SMBus(bus_no)
 address = 0x04
 
@@ -100,7 +100,17 @@ def responder(data):
     print("REQUEST  <<", data)
     print("Mode:", mode)
     
-    if mode == "integ_check":
+    if mode == "list_src":
+        try:
+            resp = \
+                {"sources": 
+                    [{"name": "Main", "port": 7070, "path": "?action=stream"}]      # mjpg_streamer default settings
+                }
+        except KeyError:
+            resp = yield from err_json(mode, False, "An error occurred while processing input data!")
+    
+    
+    elif mode == "integ_check":
         try:
             resp = {"data": data["data"]}
         except KeyError:

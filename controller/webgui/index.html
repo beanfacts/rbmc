@@ -64,8 +64,6 @@
         document.getElementById("videoStatus").style.color = "#f00";
     }, 1);
     
-
-
     var ip = location.host;
     console.log("Server: " + ip);
 
@@ -74,8 +72,12 @@
 
     if (ip == "") {
         alert("Error retrieving source IP!");
+    } else {
+        document.getElementById("powerStatus").style.color = "#fff";
+        document.getElementById("resetButton").style.color = "#fff";
+        document.getElementById("networkStatus").style.color = "#0f0";
+        document.getElementById("videoStatus").style.color = "#f00";
     }
-    
     
     // open websockets connection to the server specified
     mainSocket = new WebSocket(url);
@@ -84,7 +86,7 @@
     modifiers = [9, 16, 17, 18];
 
     // active window name
-    actName = "activewindow";
+    actName = "video";
 
     // random number for quick integrity check
     check = Math.floor((Math.random() * Math.pow(2, 52)) + 1).toString(16);
@@ -156,7 +158,7 @@
     
     // Alert user if a connection error occurs
     mainSocket.onerror = function (event) {
-        alert("Could not connect to " + url);
+        alert("Could not connect to " + url + "! Is the server running?";
     }
 
     // Callback function for the recieved message
@@ -187,11 +189,6 @@
         mainSocket.send(d);
     }
 
-    function displaySensor(data) {
-        // document.getElementById("powerDetails").innerHTML = "P: " + data["pins"]["power_led"] + " mV";
-    
-    }
-
     // Toggle video aspect ratio in case image is squished
     function videoToggle() {
         var video = document.getElementById("video");
@@ -200,26 +197,6 @@
         } else {
             video.width = 720;
         }
-    }
-    
-
-    // Update IP address list
-    function updateIP(ip_array) {
-        
-        
-        var dropdown = document.getElementById("ipList");
-        
-        // Clear the old list
-        dropdown.options.length = 0;
-        
-        // Place the new list of addresses in the dropdown
-        for (var i=0; i < ip_array.length; i++) {
-            var item = ip_array[i];
-            var element = document.createElement("option");
-            element.textContent = item;
-            element.value = item;
-            dropdown.appendChild(element);
-        }        
     }
 
     // function to deal with incoming data
@@ -238,12 +215,12 @@
         // Check if server reports a successful response
         if (data["success"] == false) {
             console.log("error: " + data["error_message"]);
-            console:log("while trying to perform: " + data["init_req"]);
+            console.log("while trying to perform: " + data["init_req"]);
             return null;
         }
 
         // Integrity Check
-        if (data["init_req"] == "integ_check") {
+        if (data["init_req"] === "integ_check") {
             if (check == data["data"]) {
                 console.log("Integrity check passed.")
             } else {
@@ -251,9 +228,9 @@
             }
         }
 
-        // Get pin voltages
-        if (data["init_req"] == "sense") {
-            displaySensor(data);
+        if (data["init_req"] === "list_src") {
+            var stream = ip + ":" + data["port"] + "/" + data["path"];
+            document.getElementById("video").src = stream;
         }
 
     }
@@ -276,7 +253,7 @@
     </div>
 
     <div class="status-bar">
-        <div><button onclick="test()" class="button" id="powerStatus"><i class="fas fa-power-off"></i></button></div>
+        <div><button onclick="powerToggle()" class="button" id="powerStatus"><i class="fas fa-power-off"></i></button></div>
         <div><button onclick="resetToggle()" class="button" id="resetButton"><i class="fas fa-redo"></i></button></div>
         &nbsp;
         <div><button class="button" id="networkStatus"><i class="fas fa-network-wired"></i></button></div>
